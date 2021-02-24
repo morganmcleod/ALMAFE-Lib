@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="ALMAFE-Lib",
-    version="0.0.6",
+    version="0.0.7",
     author="Morgan McLeod",
     author_email="mmcleod@nrao.edu",
     description="Contains reusable tools which are required by other ALMAFE packages.",
@@ -14,7 +14,7 @@ setuptools.setup(
     url="https://github.com/morganmcleod/ALMAFE-Lib",
     packages=setuptools.find_packages(),
     install_requires=['python-dateutil>=2.8.1',
-                      'mysql-connector-python==8.0.18',
+                      'mysql-connector-python>=8.0.18',
                       'cx-oracle>=8.1.0'],
     classifiers=[
         "Programming Language :: Python :: 3",
