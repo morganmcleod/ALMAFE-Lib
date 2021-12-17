@@ -2,7 +2,7 @@
 Driver wrapper for mysql-connector-python
 '''
 import mysql.connector
-from mysql.connector import Error
+from mysql.connector import Error, InterfaceError
 
 class DriverMySQL():
     '''
@@ -53,17 +53,34 @@ class DriverMySQL():
             print(f"MySQL error: {e}")
             return False
         
-    def execute(self, query, params = None, commit = False):
+    def execute(self, query, params = None, commit = False, reconnect = True, forceReconnect = False):
         '''
         Execute an SQL query.
         :param query: str
         :param params: tuple or dictionary params are bound to the variables in the operation. 
                        Specify variables using %s or %(name)s parameter style (that is, using format or pyformat style).
         :param commit: If True, commit INSERT/UPDATE/DELETE queries immediately.
+        :param reconnect: If True and the connection seems to have gone away, reconnect and retry the query.
+        :param forceReconnect: If True, always reconnect before executing the query.
         :return True/False
         '''
         try:
-            self.cursor.execute(query, params)
+            if forceReconnect:
+                self.connect()
+                self.disconnect()
+            
+            try:
+                self.cursor.execute(query, params)                
+            # if we should reconnect:
+            except InterfaceError as e:
+                if not reconnect:
+                    raise 
+                # this calls reconnect() internally:
+                self.connection.ping(reconnect = True, attempts = 2)
+                # get the cursor again:
+                self.cursor = self.connection.cursor()
+                # and retry the query:
+                self.cursor.execute(query, params)
             if commit:
                 self.connection.commit()
             return True
