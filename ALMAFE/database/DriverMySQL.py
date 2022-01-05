@@ -2,7 +2,7 @@
 Driver wrapper for mysql-connector-python
 '''
 import mysql.connector
-from mysql.connector import Error, InterfaceError
+from mysql.connector import Error
 
 class DriverMySQL():
     '''
@@ -53,7 +53,7 @@ class DriverMySQL():
             print(f"MySQL error: {e}")
             return False
         
-    def execute(self, query, params = None, commit = False, reconnect = True, forceReconnect = False):
+    def execute(self, query, params = None, commit = False, reconnect = True):
         '''
         Execute an SQL query.
         :param query: str
@@ -61,33 +61,35 @@ class DriverMySQL():
                        Specify variables using %s or %(name)s parameter style (that is, using format or pyformat style).
         :param commit: If True, commit INSERT/UPDATE/DELETE queries immediately.
         :param reconnect: If True and the connection seems to have gone away, reconnect and retry the query.
-        :param forceReconnect: If True, always reconnect before executing the query.
         :return True/False
         '''
+        doRetry = False
         try:
-            if forceReconnect:
-                self.connect()
-                self.disconnect()
-            
-            try:
-                self.cursor.execute(query, params)                
-            # if we should reconnect:
-            except InterfaceError as e:
-                if not reconnect:
-                    raise 
-                # this calls reconnect() internally:
-                self.connection.ping(reconnect = True, attempts = 2)
-                # get the cursor again:
-                self.cursor = self.connection.cursor()
-                # and retry the query:
-                self.cursor.execute(query, params)
+            self.cursor.execute(query, params)
             if commit:
                 self.connection.commit()
-            return True
         except Error as e:
-            print(f"MySQL error: {e}")
-            print(query)
-            return False
+            if not reconnect:
+                print(f"MySQL error: {e}")
+                print(query)
+                return False
+            # this calls reconnect() internally:
+            self.connection.ping(reconnect = True, attempts = 2)
+            # get the cursor again:
+            self.cursor = self.connection.cursor()
+            doRetry = True
+
+        if doRetry:
+            # and retry the query
+            try:
+                self.cursor.execute(query, params)
+                if commit:
+                    self.connection.commit()
+            except Error as e:
+                print(f"MySQL error: {e}")
+                print(query)
+                return False
+        return True
     
     def commit(self):
         '''
