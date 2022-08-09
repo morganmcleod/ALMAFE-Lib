@@ -15,24 +15,34 @@ class DriverMySQL():
         '''
         Constructor
         :param connectionInfo: dictionary having the items needed to connect to MySQL server:
-                {'host', 'user', 'passwd', 'database', 'port' : 3306 }
+                {'host', 'user', 'passwd', 'database', 'port' : 3306, 'use_pure' : False }
         '''
         self.host = connectionInfo['host']
         self.user = connectionInfo['user']
         self.passwd = connectionInfo['passwd']
         self.database = connectionInfo['database']        
         self.port = connectionInfo.get('port', 3306)
+        self.use_pure = connectionInfo.get('use_pure', False)
         self.cursor = None
         self.connect()          
         
     def connect(self):
         '''
         Connect to the database.
+        
+        use_pure=True will prevent BLOBs being returned as Unicode strings
+          (which either fails when decoding or when comparing to bytes.)
+        https://stackoverflow.com/questions/52759667/properly-getting-blobs-from-mysql-database-with-mysql-connector-in-python
         :return True/False
         '''
         self.connection = None
         try:
-            self.connection = mysql.connector.connect(host=self.host, port=self.port, user=self.user, passwd=self.passwd, database=self.database)
+            self.connection = mysql.connector.connect(host=self.host, 
+                                                      port=self.port, 
+                                                      user=self.user, 
+                                                      passwd=self.passwd, 
+                                                      database=self.database,
+                                                      use_pure=self.use_pure)
             self.cursor = self.connection.cursor()
             return True
         except Error as e:
@@ -71,7 +81,6 @@ class DriverMySQL():
         except Error as e:
             if not reconnect:
                 print(f"MySQL error: {e}")
-                print(query)
                 return False
             # this calls reconnect() internally:
             self.connection.ping(reconnect = True, attempts = 2)
@@ -87,7 +96,6 @@ class DriverMySQL():
                     self.connection.commit()
             except Error as e:
                 print(f"MySQL error: {e}")
-                print(query)
                 return False
         return True
     
