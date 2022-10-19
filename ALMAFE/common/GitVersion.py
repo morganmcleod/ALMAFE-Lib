@@ -4,13 +4,13 @@ Based on https://stackoverflow.com/questions/14989858/get-the-current-git-hash-i
 '''
 import subprocess
 
-def gitVersion(cwd = None):
+def gitVersion(cwd = None, branch = 'HEAD'):
     '''
     Return the current Git tag (if any) and revision as a string
     '''
     try:
         # this command returns the tag if there is one, otherwise just the short hash:
-        out = subprocess.check_output(['git', 'describe', '--always'], cwd = cwd if cwd else None)
+        out = subprocess.check_output(['git', 'rev-parse', '--short', branch], cwd = cwd if cwd else None)
         version = out.strip().decode('ascii')
     except OSError:
         version = "unknown"
