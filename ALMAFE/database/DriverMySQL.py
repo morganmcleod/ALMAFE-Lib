@@ -43,7 +43,6 @@ class DriverMySQL():
                                                       passwd=self.passwd, 
                                                       database=self.database,
                                                       use_pure=self.use_pure)
-            self.cursor = self.connection.cursor()
             return True
         except Error as e:
             print(f"MySQL error: {e}")
@@ -55,6 +54,8 @@ class DriverMySQL():
         :return True/False
         '''
         try:
+            if self.cursor:
+                self.cursor.close()
             self.connection.close()
             self.connection = None
             self.cursor = None
@@ -62,6 +63,9 @@ class DriverMySQL():
         except Error as e:
             print(f"MySQL error: {e}")
             return False
+        
+    def is_connected(self) -> bool:
+        return self.connection is not None
         
     def execute(self, query, params = None, commit = False, reconnect = True):
         '''
@@ -74,7 +78,10 @@ class DriverMySQL():
         :return True/False
         '''
         doRetry = False
-        try:
+        if not self.connection:
+            self.connection.ping(reconnect = True, attempts = 2)
+        try:    
+            self.cursor = self.connection.cursor()
             self.cursor.execute(query, params)
             if commit:
                 self.connection.commit()
@@ -84,13 +91,12 @@ class DriverMySQL():
                 return False
             # this calls reconnect() internally:
             self.connection.ping(reconnect = True, attempts = 2)
-            # get the cursor again:
-            self.cursor = self.connection.cursor()
             doRetry = True
 
         if doRetry:
             # and retry the query
             try:
+                self.cursor = self.connection.cursor()
                 self.cursor.execute(query, params)
                 if commit:
                     self.connection.commit()
@@ -106,6 +112,9 @@ class DriverMySQL():
         '''
         try:
             self.connection.commit()
+            if self.cursor:
+                self.cursor.close()
+                self.cursor = None
             return True
         except Error as e:
             print(f"MySQL error: {e}")
