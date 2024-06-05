@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="ALMAFE-Lib",
-    version="0.0.13",
+    version="0.0.14",
     author="Morgan McLeod",
     author_email="mmcleod@nrao.edu",
     description="Contains reusable tools which are required by other ALMAFE packages.",
