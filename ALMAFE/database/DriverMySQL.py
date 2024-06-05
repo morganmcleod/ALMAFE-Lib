@@ -79,7 +79,7 @@ class DriverMySQL():
         '''
         doRetry = False
         if not self.connection:
-            self.connection.ping(reconnect = True, attempts = 2)
+            self.connect()
         try:    
             self.cursor = self.connection.cursor()
             self.cursor.execute(query, params)
