@@ -14,6 +14,12 @@ initialized a timestamp from provided, or now() if None provided
 ## ALMAFE.basic.StripQuotes:
 Utility to strip quotes from a string, if present.
 
+## ALMAFE.basic.EnumHelper
+Helper class for Enum and string conversion
+
+## ALMAFE.basic.Units
+Enum of widely-used engineering units
+
 ## ALMAFE.common.GitVersion:
 
 ### function gitVersion():
