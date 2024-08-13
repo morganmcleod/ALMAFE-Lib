@@ -1,4 +1,4 @@
-from EnumHelper import EnumHelper
+from .EnumHelper import EnumHelper
 
 class Units(EnumHelper):
     '''
