@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="ALMAFE-Lib",
-    version="0.0.16",
+    version="0.0.17",
     author="Morgan McLeod",
     author_email="mmcleod@nrao.edu",
     description="Contains reusable tools which are required by other ALMAFE packages.",
@@ -21,5 +21,5 @@ setuptools.setup(
         "License :: OSI Approved :: GNU Lesser General Public License v2 or later (LGPLv2+)",
         "Operating System :: OS Independent",
     ],
-    python_requires='>=3.9',
+    python_requires='>=3.8',
 )
