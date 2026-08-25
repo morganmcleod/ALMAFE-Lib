@@ -1,6 +1,7 @@
 '''
 Driver wrapper for mysql-connector-python
 '''
+import time
 import mysql.connector
 from mysql.connector import Error
 
@@ -26,7 +27,7 @@ class DriverMySQL():
         self.cursor = None
         self.connect()          
         
-    def connect(self):
+    def connect(self) -> bool:
         '''
         Connect to the database.
         
@@ -44,11 +45,11 @@ class DriverMySQL():
                                                       database=self.database,
                                                       use_pure=self.use_pure)
             return True
-        except Error as e:
+        except mysql.connector.Error as e:
             print(f"MySQL error: {e}")
             return False
 
-    def disconnect(self):
+    def disconnect(self) -> bool:
         '''
         Disconnect from the database.
         :return True/False
@@ -60,14 +61,20 @@ class DriverMySQL():
             self.connection = None
             self.cursor = None
             return True
-        except Error as e:
+        except mysql.connector.Error as e:
             print(f"MySQL error: {e}")
             return False
         
     def is_connected(self) -> bool:
         return self.connection is not None
         
-    def execute(self, query, params = None, commit = False, reconnect = True):
+    def execute(self, 
+            query: str, 
+            params: str | None = None, 
+            commit: bool = False,
+            reconnect: bool = True,
+            fail_after: float = 86400
+        ) -> bool:
         '''
         Execute an SQL query.
         :param query: str
@@ -75,37 +82,41 @@ class DriverMySQL():
                        Specify variables using %s or %(name)s parameter style (that is, using format or pyformat style).
         :param commit: If True, commit INSERT/UPDATE/DELETE queries immediately.
         :param reconnect: If True and the connection seems to have gone away, reconnect and retry the query.
+        :param fail_after: Give up reconnecting after this many seconds
         :return True/False
         '''
-        doRetry = False
-        if not self.connection:
-            self.connect()
-        try:    
-            self.cursor = self.connection.cursor()
-            self.cursor.execute(query, params)
-            if commit:
-                self.connection.commit()
-        except Error as e:
-            if not reconnect:
-                print(f"MySQL error: {e}")
-                return False
-            # this calls reconnect() internally:
-            self.connection.ping(reconnect = True, attempts = 2)
-            doRetry = True
-
-        if doRetry:
-            # and retry the query
-            try:
-                self.cursor = self.connection.cursor()
-                self.cursor.execute(query, params)
-                if commit:
-                    self.connection.commit()
-            except Error as e:
-                print(f"MySQL error: {e}")
-                return False
+        done = False
+        delay = 0
+        fail_at = time.time() + fail_after
+        while not done:
+            if not self.is_connected():
+                self.connect()
+            if not self.is_connected():
+                time.sleep(delay)
+                delay += 1
+            else:
+                try:
+                    self.cursor = self.connection.cursor(buffered = True)
+                    self.cursor.execute(query, params)
+                    if commit:
+                        self.connection.commit()
+                    done = True
+                except mysql.connector.Error as e:
+                    print(f"MySQL error: {e}")
+                    if not reconnect:
+                        return False
+                    else:
+                        if time.time() > fail_at:                            
+                            return False
+                        time.sleep(delay)
+                        delay += 1
+                        try:
+                            self.connection.reconnect()
+                        except:
+                            pass
         return True
     
-    def commit(self):
+    def commit(self) -> bool:
         '''
         Commit any previously executed but not yet committed INSERT/UPDATE/DELETE queries.
         :return True/False
@@ -116,55 +127,58 @@ class DriverMySQL():
                 self.cursor.close()
                 self.cursor = None
             return True
-        except Error as e:
+        except mysql.connector.Error as e:
             print(f"MySQL error: {e}")
             return False
         
-    def rollback(self):
+    def rollback(self) -> bool:
         '''
         Rollback any previously executed but not yet committed INSERT/UPDATE/DELETE queries.
         :return True/False
         '''
         try:
             self.connection.rollback()
+            if self.cursor:
+                self.cursor.close()
+                self.cursor = None
             return True
-        except Error as e:
+        except mysql.connector.Error as e:
             print(f"MySQL error: {e}")
             return False
 
-    def fetchone(self):
+    def fetchone(self) -> tuple[any] | None:
         '''
         Fetch one row from the last SELECT query.
-        :return tuple or False
+        :return tuple or None
         '''
         try:
             row = self.cursor.fetchone()
             return row
-        except Error as e:
+        except mysql.connector.Error as e:
             print(f"MySQL error: {e}")
-            return False    
+            return None    
 
-    def fetchmany(self, chunkSize):
+    def fetchmany(self, max_rows) -> list[tuple[any]] | None:
         '''
         Fetch multiple rows from the last SELECT query.
-        :param chunkSize: max number of rows to fetch
-        :return list of tuple or False
+        :param max_rows: max number of rows to fetch
+        :return list of tuple or None
         '''
         try:
-            result = self.cursor.fetchmany(chunkSize)
+            result = self.cursor.fetchmany(max_rows)
             return result
-        except Error as e:
+        except mysql.connector.Error as e:
             print(f"MySQL error: {e}")
-            return False
+            return None
         
-    def fetchall(self):
+    def fetchall(self) -> list[tuple[any]] | None:
         '''
         Fetch all rows from the last SELECT query.
-        :return list of tuple or False
+        :return list of tuple or None
         '''
         try:
             result = self.cursor.fetchall()
             return result
-        except Error as e:
+        except mysql.connector.Error as e:
             print(f"MySQL error: {e}")
-            return False
+            return None
